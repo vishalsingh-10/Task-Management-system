@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>* {
+	box-sizing: border-box;
+}
+body {
+  background-image: url('img.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size:cover;
+	font-family: 'Gloria Hallelujah', cursive;
+	font-size: 1.4rem;
+	margin: 0;
+	padding: 1rem;
+	min-height: 100vh;
+  display: flex; /* Use flex to center the content vertically */
+  flex-direction: column; /* Align content vertically from top to bottom */
+  align-items: center; /* Center content horizontally */
+  justify-content: center; /* Center content vertically */
+}
+
+h1{
+  text-align: center;
+  text-shadow: 4px -1px 12px rgba(0,0,0,0.9);
+  margin-top: 20px; /* Add margin to create space between header and content */
+}
+  
+  
+  form{
+    text-align:center;
+    margin-bottom: 20px;
+}
+input[type="text"]{
+    padding:8px;
+    width:500px;
+    height: 35px;
+}
+.add-btn{
+  
+  width: 60px;
+  height: 30px;
+  border: none;
+  outline: none;
+  background: #000000;
+  color: #fff;
+  font-size: 15px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 5px 20px -5px rgba(0,0,0,0.5);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+.add-btn:hover{
+  background-color:rgb(71, 71, 71);
+}
+ul {
+	list-style-position: inside;
+	width: 600px;
+	max-width: 100%;
+	background: white;
+	box-shadow: 0.25rem 0.25rem 0.75rem rgb(0 0 0 / 0.15);
+	padding: 0;
+	margin: 0;
+	border-radius: 0.1rem;
+  list-style: none;
+  align-items: center;
+  align-content: center;
+  text-align: center;
+}
+
+li {
+  padding: 0 0 0 1rem;
+  display: flex;
+  align-items: center;
+}
+li:not(:last-child) {
+  border-bottom: 1px solid lightblue;
+}
+
+li:first-child {
+	margin-top: 1rem;
+  
+}
+li:last-child {
+	margin-bottom: 1rem;
+}
+.edit-button{
+  background-image: url("edit-btn.png");
+  width: 24px;
+  height: 24px;
+  background-color: #fff;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.delete-button{
+  background-image: url("delete-btn.png");
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  background-color: #ff0000;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.edit-button,
+.delete-button {
+    font-size: 16px;
+    cursor: pointer;
+    margin-left: 8px;
+    border: none;
+}
+</style>
+<title>Task Management System</title>
+</head>
+<body>
+    <h1>Task Management System</h1>
+    <form id="taskEntry">
+        <input type="text" id="task-input" placeholder="Enter your Task">
+        <button type="submit" class="add-btn">Add</button>
+    </form>
+
+    <ul id="tasksDisplay" class="tasks">
+    </ul>
+</body>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const taskList = document.getElementById("tasksDisplay");
+    const fetchAndDisplayTasks = () => {
+      fetch('/api/tasks')
+        .then(response => response.json())
+        .then(data => {
+          taskList.innerHTML = ''; // Clear the existing list
+          data.tasks.forEach(task => {
+            // Create list item element and content
+            const li = document.createElement("li");
+            li.innerHTML = `
+              <label>
+                <input type="checkbox" ${task.status === "Done" ? "checked" : ""}>
+                ${task.task}
+              </label>
+              <span>
+                <button class="edit-button">Edit</button>
+                <button class="delete-button">X</button>
+              </span>
+            `;
+
+            // Add event listeners for edit and delete buttons, and checkbox
+            // ...
+            const editButton = li.querySelector(".edit-button");
+          editButton.addEventListener("click", () => {
+            const updatedTask = prompt("Enter the updated task:", task.task);
+            if (updatedTask !== null) {
+              fetch(`/api/tasks/${task._id}`, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ task: updatedTask, status: task.status })
+              })
+              .then(response => response.json())
+              .then(updatedTodo => {
+                task.task = updatedTask;
+                li.querySelector("label").textContent = updatedTask;
+              })
+              .catch(error => console.error("Error updating task:", error));
+            }
+          });
+
+          // Delete button click event
+          const deleteButton = li.querySelector(".delete-button");
+          deleteButton.addEventListener("click", () => {
+            fetch(`/api/tasks/${task._id}`, {
+              method: "DELETE"
+            })
+            .then(() => {
+              taskList.removeChild(li);
+            })
+            .catch(error => console.error("Error deleting task:", error));
+          });
+
+          // Checkbox change event
+          const checkbox = li.querySelector("input[type='checkbox']");
+          checkbox.addEventListener("change", () => {
+            const isDone = checkbox.checked;
+
+            fetch(`/api/tasks/${task._id}`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({ task: task.task, status: isDone ? "Done" : "Not Done" })
+            })
+            .then(response => response.json())
+            .then(updatedTodo => {
+              if (isDone) {
+                li.style.textDecoration = "line-through";
+              } else {
+                li.style.textDecoration = "none";
+              }
+              task.status = isDone ? "Done" : "Not Done";
+            })
+            .catch(error => console.error("Error updating status:", error));
+          });
+
+            taskList.appendChild(li);
+          });
+        })
+        .catch(error => console.error("Error fetching tasks:", error));
+    };
+    // Fetch tasks from the backend and display them
+      const addButton = document.querySelector(".add-btn");
+      addButton.addEventListener("click", event => {
+        event.preventDefault();
+        const taskInput = document.getElementById("task-input");
+        const task = taskInput.value.trim();
+        if (task !== "") {
+          fetch('/api/tasks', {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ task: task })
+          })
+          .then(response => response.json())
+          .then(newTask => {
+            taskInput.value = "";
+            fetchAndDisplayTasks(); // Refresh the task list
+          })
+          .catch(error => console.error("Error adding task:", error));
+        }
+      });
+    
+      fetchAndDisplayTasks(); // Initial fetch and display of tasks
+  });
+
+</script>
+</html>
